@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- TODO(lab): one line that states the question this lab answers. -->
+<title>Search Lab — TODAY vs PROPOSAL</title>
+<!-- Credentials: never inline keys. test-search.config.js (git-ignored) defines window.SEARCH_RESOURCES. -->
+<script src="test-search.config.js"></script>
+<link rel="stylesheet" href="lab-kit/lab-core.css" />
+<script src="lab-kit/lab-core.js"></script>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <h1 id="labTitle">Search Lab</h1>
+    <span class="sub" id="labQuestion">Diagnostic baseline vs proposal, live and read-only</span>
+  </div>
+  <div class="field"><label for="lc-resource">Service</label><select id="lc-resource"></select></div>
+  <div class="field"><label for="lc-index">Index</label><input id="lc-index" list="lc-index-list" /><datalist id="lc-index-list"></datalist></div>
+  <div class="field"><label for="lc-apiversion">api-version</label><input id="lc-apiversion" style="min-width:150px" /></div>
+  <span class="env" id="lc-env"></span>
+  <span class="spacer"></span>
+  <button class="btn ghost sm" onclick="LabCore.toggleShotMode()" title="Hide controls for screenshots">📷 Shot mode</button>
+  <button class="btn ghost sm" onclick="exportRun()">⬇ JSON</button>
+  <button class="btn ghost sm" onclick="copyMatrix()">⧉ Markdown</button>
+  <button class="btn primary" id="runBtn" data-smoke="run" onclick="runAll()">▶ Run comparison</button>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <label class="lbl" for="queries">Queries (one per line)</label>
+    <textarea class="ta" id="queries" rows="6"></textarea>
+    <div class="hint">The first line is shown side by side; all lines go to the Matrix tab.</div>
+
+    <div class="row">
+      <div><label class="lbl" for="top">top</label><input class="inp" id="top" type="number" min="1" max="1000" value="50" /></div>
+      <div><label class="lbl" for="k">overlap @K</label><input class="inp" id="k" type="number" min="1" max="100" value="10" /></div>
+    </div>
+
+    <label class="lbl"><span data-label="A">A — Today</span> <span id="provA"></span></label>
+    <pre class="code" id="bodyA">—</pre>
+    <label class="lbl"><span data-label="B">B — Proposal</span> <span id="provB"></span></label>
+    <pre class="code" id="bodyB">—</pre>
+    <div class="hint" id="provHint">Every value in A must be copied from the production request (ticket, logs, app code).
+      Anything the lab chose is labelled <span class="pill warn">lab decision</span>.</div>
+
+    <label class="lbl">What this lab does <b>not</b> prove</label>
+    <ul class="hint" id="limits" data-section="limits" style="padding-left:16px"></ul>
+  </aside>
+
+  <main>
+    <div class="banner" id="lc-banner"></div>
+
+    <div class="board">
+      <div class="score a"><div class="who"><span data-label="A">A — Today</span><span id="boardProvA"></span></div>
+        <div class="n" id="nA">—</div><div class="q" id="qA"></div></div>
+      <div class="score b"><div class="who"><span data-label="B">B — Proposal</span><span id="boardProvB"></span></div>
+        <div class="n" id="nB">—</div><div class="q" id="qB"></div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-pane="p-side">Side by side</button>
+      <button class="tab" data-pane="p-matrix">Matrix</button>
+      <button class="tab" data-pane="p-why">Why it matched</button>
+      <button class="tab" data-pane="p-an">Analyzer</button>
+      <button class="tab" data-pane="p-req">Requests / parity</button>
+    </div>
+
+    <section class="pane active" id="p-side">
+      <div class="cols">
+        <div><div class="colhead"><span data-label="A">A — Today</span><span class="muted" id="msA"></span></div><div id="listA"><div class="empty">Run the comparison.</div></div></div>
+        <div><div class="colhead"><span data-label="B">B — Proposal</span><span class="muted" id="msB"></span></div><div id="listB"><div class="empty">Run the comparison.</div></div></div>
+      </div>
+    </section>
+
+    <section class="pane" id="p-matrix">
+      <div class="card"><div class="card-head">Every query, A vs B <span class="muted" id="progress"></span></div>
+        <div class="card-body" id="matrix"><div class="empty">Run the comparison.</div></div></div>
+    </section>
+
+    <section class="pane" id="p-why">
+      <div class="card"><div class="card-head">Fields that produced the match (A) <span class="hint" style="margin:0">from <code>@search.features</code></span></div>
+        <div class="card-body" id="whyFields"><div class="empty">Run the comparison.</div></div></div>
+      <div class="card"><div class="card-head">Surface forms highlighted (A) <span class="hint" style="margin:0">edit distance to the query term</span></div>
+        <div class="card-body" id="whyForms"><div class="empty">Run the comparison.</div></div></div>
+    </section>
+
+    <section class="pane" id="p-an">
+      <div class="card"><div class="card-head">Analyze API — what the index stores</div>
+        <div class="card-body">
+          <div class="row">
+            <div><label class="lbl" for="anText">Catalog text</label><input class="inp" id="anText" /></div>
+            <div><label class="lbl" for="anTerm">Compare with term</label><input class="inp" id="anTerm" /></div>
+          </div>
+          <div class="hint">Needs an admin key for the selected service. Tokens in red are within edit distance 1 of the term.</div>
+          <button class="btn sm" style="margin-top:8px" onclick="runAnalyze()">Analyze</button>
+          <div id="anOut" style="margin-top:10px"></div>
+        </div></div>
+    </section>
+
+    <section class="pane" id="p-req">
+      <div class="card"><div class="card-head">Equivalent GET in production format <span class="pill neutral">parity check</span></div>
+        <div class="card-body"><pre class="code" id="parity">—</pre></div></div>
+      <div class="card"><div class="card-head">Request log <span class="hint" style="margin:0">keys are always redacted</span></div>
+        <div class="card-body" id="lc-requests"></div></div>
+    </section>
+  </main>
+</div>
+
+<script>
+'use strict';
+const { $, esc, pill } = LabCore;
+
+/* ================================================================ CASE
+   TODO(lab): everything case-specific lives here. Keep provenance honest:
+   A = a captured request or an explicit assumption; B = the proposal under test. */
+const CASE = {
+  id: 'template',
+  title: 'Search Lab',
+  question: 'Diagnostic baseline vs proposal, live and read-only',
+  defaultResource: 'Sandbox',
+  defaultIndex: '',
+  apiVersion: '',                      // empty = SEARCH_API_VERSION from the config
+  keyField: 'id',
+  displayFields: ['title', 'name'],
+  queries: ['sample query'],
+  analyzers: ['standard.lucene'],
+  analyzeSample: 'Sample catalog text',
+  limits: [
+    'Results reflect the index at run time; the catalog changes daily.',
+    'Scores are not comparable across different queries.',
+  ],
+  // Source of every A value (ticket id, log query, app file) — shown as provenance.
+  // provA: 'prod' when A was copied from a captured production request;
+  //        'assumption' when no request exists and A is a diagnostic baseline.
+  provA: 'assumption',
+  sourceA: 'Diagnostic baseline; replace with the captured request source.',
+  labelA: 'A — Diagnostic baseline (assumption)',
+  labelB: 'B — Proposal',
+  buildA: q => ({ search: q, queryType: 'simple', searchMode: 'any', count: true }),
+  buildB: q => ({ search: q, queryType: 'simple', searchMode: 'any', count: true }),
+};
+
+const HL_PRE = '@@HL@@', HL_POST = '@@/HL@@';
+let RUNS = [];
+
+function topN(){ return Math.max(1, Math.min(1000, Math.trunc(+$('top').value) || 50)); }
+function withCommon(body){
+  const b = { ...body, top: topN() };
+  if (b.highlight) { b.highlightPreTag = HL_PRE; b.highlightPostTag = HL_POST; } else delete b.highlight;
+  return b;
+}
+function queries(){ return $('queries').value.split('\n').map(s => s.trim()).filter(Boolean); }
+function docId(d){ return d[CASE.keyField]; }
+function docName(d){ return CASE.displayFields.map(field => d[field]).find(value => value != null && value !== '') || docId(d); }
+function hlHtml(s){ return esc(s).split(esc(HL_PRE)).join('<mark>').split(esc(HL_POST)).join('</mark>'); }
+
+function refreshBodies(){
+  const q = queries()[0] || '';
+  $('bodyA').textContent = JSON.stringify(withCommon(CASE.buildA(q)), null, 2);
+  $('bodyB').textContent = JSON.stringify(withCommon(CASE.buildB(q)), null, 2);
+  $('parity').textContent = LabCore.parityGetUrl(withCommon(CASE.buildA(q)));
+}
+
+/* ============================================================= running */
+async function runOne(q){
+  const [a, b] = await Promise.allSettled([
+    LabCore.search(withCommon(CASE.buildA(q)), { label: `A · ${q}` }),
+    LabCore.search(withCommon(CASE.buildB(q)), { label: `B · ${q}` }),
+  ]);
+  const pick = r => {
+    if (r.status !== 'fulfilled') return { error: r.reason.message };
+    if (r.value.docs.some(d => typeof docId(d) !== 'string' || !docId(d))) {
+      return { error: `Result is missing the configured document key "${CASE.keyField}". Check CASE.keyField and the request select fields.` };
+    }
+    return r.value;
+  };
+  const A = pick(a), B = pick(b);
+  const ov = (!A.error && !B.error) ? LabCore.overlapAtK(A.docs.map(docId), B.docs.map(docId), +$('k').value || 10) : null;
+  return { q, A, B, ov };
+}
+
+async function runAll(){
+  const qs = queries();
+  if (!qs.length){ LabCore.banner('warn', 'Enter at least one query.'); return; }
+  if (!LabCore.indexName()){ LabCore.banner('err', 'Pick an index first.'); return; }
+  LabCore.clearBanner(); $('runBtn').disabled = true; RUNS = [];
+  try {
+    for (const [i, q] of qs.entries()){
+      $('progress').textContent = `${i + 1}/${qs.length} — ${q}`;
+      RUNS.push(await runOne(q));
+      if (i === 0) renderSide(RUNS[0]);
+      renderMatrix();
+    }
+    renderWhy(RUNS[0]);
+    const errs = RUNS.flatMap(r => [r.A.error, r.B.error]).filter(Boolean);
+    if (errs.length) LabCore.banner('err', esc(errs[0]));
+  } catch (error) {
+    LabCore.banner('err', esc(error.message));
+  } finally { $('progress').textContent = ''; $('runBtn').disabled = false; }
+}
+
+/* =========================================================== rendering */
+function docCard(d, i, otherIds){
+  const only = otherIds && !otherIds.has(docId(d));
+  const hl = d['@search.highlights'] || {};
+  const frag = Object.entries(hl).slice(0, 2).map(([f, v]) => `<div class="why"><code>${esc(f)}</code>: ${hlHtml(v[0])}</div>`).join('');
+  return `<div class="doc ${only ? 'only' : ''}"><div class="top"><span class="rk">#${i + 1}</span>
+    <span class="nm">${esc(docName(d))}</span><span class="sc">${d['@search.score'] != null ? (+d['@search.score']).toFixed(2) : ''}</span></div>${frag}</div>`;
+}
+
+function renderSide(r){
+  const set = x => new Set((x.docs || []).map(docId));
+  for (const [k, leg, other] of [['A', r.A, r.B], ['B', r.B, r.A]]){
+    $('n' + k).textContent = leg.error ? 'error' : (leg.count ?? leg.docs.length);
+    $('q' + k).textContent = leg.error ? leg.error : JSON.parse($('body' + k).textContent).search;
+    $('ms' + k).textContent = leg.error ? '' : `${Math.round(leg.ms)} ms`;
+    $('list' + k).innerHTML = leg.error ? `<div class="banner show err">${esc(leg.error)}</div>`
+      : (leg.docs.length ? leg.docs.map((d, i) => docCard(d, i, other.error ? null : set(other))).join('') : '<div class="empty">0 results</div>');
+  }
+}
+
+function matrixRows(){
+  return RUNS.map(r => [r.q,
+    r.A.error ? 'error' : r.A.count, r.B.error ? 'error' : r.B.count,
+    (r.A.error || r.B.error) ? '—' : (r.B.count - r.A.count),
+    r.ov ? `${Math.round(r.ov.ratio * 100)}%` : '—', r.ov ? (r.ov.top1Same ? 'same' : 'changed') : '—',
+    r.A.error ? '—' : Math.round(r.A.ms), r.B.error ? '—' : Math.round(r.B.ms)]);
+}
+const MATRIX_HEAD = ['query', 'A count', 'B count', 'Δ', 'overlap@K', 'top-1', 'A ms', 'B ms'];
+
+function renderMatrix(){
+  $('matrix').innerHTML = `<table><thead><tr>${MATRIX_HEAD.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>` +
+    matrixRows().map(row => `<tr>${row.map((c, i) => `<td class="${i ? 'num' : 'mono'}">${esc(c)}</td>`).join('')}</tr>`).join('') + '</tbody></table>';
+}
+
+function renderWhy(r){
+  if (!r || r.A.error){ return; }
+  const fields = {}, forms = {};
+  for (const d of r.A.docs){
+    for (const [f, v] of Object.entries(d['@search.features'] || {})) if ((v.uniqueTokenMatches || 0) > 0) fields[f] = (fields[f] || 0) + 1;
+    for (const v of Object.values(d['@search.highlights'] || {})) for (const frag of v)
+      for (const m of LabCore.extractMarks(frag, HL_PRE, HL_POST)) forms[m.toLowerCase()] = (forms[m.toLowerCase()] || 0) + 1;
+  }
+  const term = r.q.split(/\s+/)[0] || '';
+  const fRows = Object.entries(fields).sort((a, b) => b[1] - a[1]);
+  $('whyFields').innerHTML = fRows.length ? `<table><thead><tr><th>field</th><th class="num">docs</th></tr></thead><tbody>${fRows.map(([f, n]) => `<tr><td class="mono">${esc(f)}</td><td class="num">${n}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">No <code>@search.features</code> in the response (send <code>featuresMode: "enabled"</code>).</div>';
+  const mRows = Object.entries(forms).sort((a, b) => b[1] - a[1]);
+  $('whyForms').innerHTML = mRows.length ? `<table><thead><tr><th>surface form</th><th class="num">hits</th><th class="num">distance to “${esc(term)}”</th></tr></thead><tbody>${mRows.map(([m, n]) => `<tr><td class="mono">${esc(m)}</td><td class="num">${n}</td><td class="num">${LabCore.editDistance(m, term)}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">No highlights in the response (set <code>highlight</code> to retrievable searchable fields).</div>';
+}
+
+async function runAnalyze(){
+  const text = $('anText').value, term = $('anTerm').value.trim();
+  $('anOut').innerHTML = '';
+  for (const analyzer of CASE.analyzers){
+    try {
+      const toks = await LabCore.analyze(text, analyzer, { label: `analyze · ${analyzer}` });
+      const chips = toks.map(t => { const dd = term ? LabCore.editDistance(t.token, term) : 99;
+        return `<span class="tok ${dd <= 1 ? 'hit' : ''}">${esc(t.token)}${term ? `<sup>${dd}</sup>` : ''}</span>`; }).join('');
+      $('anOut').insertAdjacentHTML('beforeend', `<div class="card"><div class="card-head"><code>${esc(analyzer)}</code><span class="muted">${toks.length} tokens</span></div><div class="card-body">${chips}</div></div>`);
+    } catch (e){ $('anOut').insertAdjacentHTML('beforeend', `<div class="banner show err"><code>${esc(analyzer)}</code>: ${esc(e.message)}</div>`); }
+  }
+}
+
+/* ============================================================ evidence */
+function exportRun(){
+  LabCore.exportJson(CASE.id, {
+    case: { id: CASE.id, question: CASE.question, limits: CASE.limits },
+    runs: RUNS.map(r => ({ query: r.q, overlap: r.ov,
+      A: r.A.error ? { error: r.A.error } : { count: r.A.count, ms: Math.round(r.A.ms), top: r.A.docs.slice(0, 20).map((d, i) => ({ rank: i + 1, id: docId(d), name: docName(d), score: d['@search.score'] })) },
+      B: r.B.error ? { error: r.B.error } : { count: r.B.count, ms: Math.round(r.B.ms), top: r.B.docs.slice(0, 20).map((d, i) => ({ rank: i + 1, id: docId(d), name: docName(d), score: d['@search.score'] })) },
+    })),
+  });
+}
+function copyMatrix(){ LabCore.copyMarkdown(MATRIX_HEAD, matrixRows()); }
+
+/* ================================================================ init */
+(async function init(){
+  document.title = `${CASE.title} — ${CASE.question}`;
+  $('labTitle').textContent = CASE.title; $('labQuestion').textContent = CASE.question;
+  $('queries').value = CASE.queries.join('\n');
+  $('anText').value = CASE.analyzeSample; $('anTerm').value = CASE.queries[0] || '';
+  $('limits').innerHTML = CASE.limits.map(l => `<li>${esc(l)}</li>`).join('');
+  $('provA').innerHTML = pill(CASE.provA, CASE.sourceA); $('provB').innerHTML = pill('proposal');
+  $('boardProvA').innerHTML = pill(CASE.provA); $('boardProvB').innerHTML = pill('proposal');
+  document.querySelectorAll('[data-label="A"]').forEach(el => { el.textContent = CASE.labelA; });
+  document.querySelectorAll('[data-label="B"]').forEach(el => { el.textContent = CASE.labelB; });
+  if (CASE.provA === 'assumption') $('provHint').innerHTML = 'No production request was captured: A is a <b>diagnostic baseline</b>; every A value is an ' +
+    pill('assumption') + ' until replaced by the real request. Anything else the lab chose is labelled ' + pill('lab') + '.';
+  $('queries').addEventListener('input', refreshBodies); $('top').addEventListener('input', refreshBodies);
+  await LabCore.init({ defaultResource: CASE.defaultResource, defaultIndex: CASE.defaultIndex, apiVersion: CASE.apiVersion || undefined });
+  refreshBodies();
+})();
+</script>
+</body>
+</html>

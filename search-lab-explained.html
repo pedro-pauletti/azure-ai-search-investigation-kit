@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#f5f6f8" />
+<meta name="description" content="An interactive field guide to investigating Azure AI Search with one agent and specialized skills." />
+<title>Azure AI Search — Investigate, Prove, Reuse</title>
+<style>
+:root{color-scheme:light;--bg:#f5f6f8;--ink:#18263c;--muted:#526077;--line:#dce2eb;--blue:#174ed1;--soft:#eef3ff;--green:#216346;--amber:#885408;--mono:Consolas,'Cascadia Code',monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Segoe UI',system-ui,sans-serif}
+button,a,summary{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.5}
+a{color:var(--blue);text-underline-offset:3px}
+a:hover{color:#0c348e}
+button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:4px}
+[hidden]{display:none!important}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{text-wrap:balance}
+code{font-family:var(--mono);font-size:.85em;overflow-wrap:anywhere}
+.wrap{max-width:1180px;margin:auto;padding:0 28px}
+.skip{position:absolute;top:-80px;left:20px;background:white;padding:12px;z-index:2}
+.skip:focus{top:12px}
+.icon-library{position:absolute;width:0;height:0;overflow:hidden}
+.icon{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.masthead{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding-top:24px;font-size:.78rem;letter-spacing:.05em;font-weight:700;text-transform:uppercase;color:var(--muted)}
+.brand-name{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.brand-name img{flex:none}
+header{padding:20px 0 16px}
+h1{font-size:clamp(2rem,5vw,3.25rem);line-height:1.1;letter-spacing:-.04em;margin-bottom:12px}
+.intro{color:var(--muted);max-width:690px}
+.agent{display:inline-flex;gap:10px;align-items:center;margin-top:18px;font-size:.8rem}
+.agent::before{content:'';width:8px;height:8px;background:var(--blue);border-radius:50%}
+.section-label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+.view-switch{display:flex;gap:6px;margin-bottom:14px}
+.view-switch .icon,.btn .icon,summary .icon{margin-right:6px}
+.view-switch button{border:1px solid var(--line);border-radius:8px;background:white;padding:9px 15px;color:var(--muted);font-size:.85rem}
+.view-switch button:hover{border-color:var(--blue);color:var(--blue)}
+.view-switch button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:white}
+.agent-overview{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:14px}
+.agent-map,.usage{border:1px solid var(--line);border-radius:16px;background:white;padding:20px;min-width:0;box-shadow:0 3px 14px #18263c05}
+.map-heading{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:16px}
+.map-heading h2,.usage h2{font-size:1.05rem;margin-bottom:0}
+.map-heading span{font-size:.7rem;color:var(--muted)}
+.connections{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);gap:12px;align-items:center}
+.node-column{display:grid;gap:10px}
+.capability{position:relative;border:1px solid var(--line);background:#f7f9fc;border-radius:10px;padding:12px 9px;text-align:left;color:var(--ink)}
+.capability strong{display:flex;align-items:center;gap:6px;font-size:.78rem}
+.capability .icon,.workflow .icon{color:var(--accent,var(--blue))}
+.capability[data-capability="learn"],.workflow[data-workflow="benchmark-relevance"]{--accent:#14746b;--tint:#edf8f5}
+.capability[data-capability="skills"],.workflow[data-workflow="review-capacity"]{--accent:#7252a1;--tint:#f5f1fb}
+.capability span{display:block;color:var(--muted);font-size:.7rem;margin-top:3px}
+.capability:hover{border-color:var(--blue)}
+.capability[aria-pressed="true"]{border-color:var(--accent,var(--blue));background:var(--tint,var(--soft))}
+.node-column:first-child .capability::after{content:'';position:absolute;left:100%;width:13px;height:1px;top:50%;background:var(--line)}
+.node-column:last-child .capability::before{content:'';position:absolute;right:100%;width:13px;height:1px;top:50%;background:var(--line)}
+.engineer-node{background:linear-gradient(145deg,#203857,var(--ink));color:white;border-radius:14px;padding:18px 10px;text-align:center}
+.engineer-icon{margin:0 auto 9px;border:1px solid #a5b9dd;border-radius:10px;width:40px;height:40px;display:grid;place-items:center;color:#d5e2fb;font:700 13px var(--mono)}
+.engineer-icon .icon{width:24px;height:24px}
+.engineer-node strong{display:block;font-size:.85rem}
+.engineer-node span{display:block;font-size:.68rem;color:#c8d5e9;margin-top:7px}
+.access-detail{border-top:1px solid var(--line);padding-top:14px;margin-top:16px;min-height:137px}
+.access-detail h3{font-size:.9rem;margin-bottom:6px}
+.access-detail p{font-size:.77rem;color:var(--muted)}
+.tool-tokens{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tool-tokens code{font-size:.63rem;color:var(--blue);background:var(--soft);padding:3px 5px;border-radius:4px}
+.tool-tokens a{font-size:.72rem}
+.access-note{font-size:.71rem;color:var(--amber);margin-top:12px}
+.usage ol{padding-left:20px;margin:16px 0;font-size:.8rem}
+.usage li{padding:0 0 13px 3px}
+.usage li b{display:block;margin-bottom:4px}
+.usage li span{color:var(--muted);display:block}
+.usage .btn{display:block;width:100%;margin-top:8px}
+.workflow-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.workflow{border:1px solid var(--line);border-radius:12px;background:white;padding:14px;text-align:left;color:var(--ink);min-width:0}
+.workflow:hover{border-color:var(--blue);background:#fafcff}
+.workflow[aria-pressed="true"]{border-color:var(--accent,var(--blue));box-shadow:inset 0 0 0 1px var(--accent,var(--blue));background:var(--tint,var(--soft))}
+.workflow strong{display:flex;align-items:center;gap:7px;font-size:.92rem}
+.workflow span{display:block;color:var(--muted);font-size:.76rem;margin-top:3px}
+.journey{background:white;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.journey-top{padding:12px 24px;display:flex;justify-content:space-between;gap:14px;align-items:center;border-bottom:1px solid var(--line)}
+.journey-top p{font-size:.8rem;color:var(--muted)}
+.skill-link{font-size:.78rem;max-width:55%;overflow-wrap:anywhere;text-align:right}
+.rail{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:12px 24px 0;margin:0;gap:8px}
+.rail button{width:100%;display:flex;gap:8px;align-items:center;border:0;border-bottom:2px solid var(--line);background:none;padding:8px 2px 12px;color:var(--muted);text-align:left;font-size:.84rem}
+.rail button:hover{color:var(--blue)}
+.rail button[aria-current="step"]{color:var(--blue);border-color:var(--blue);font-weight:700}
+.step-number{font-size:.7rem;border:1px solid currentColor;border-radius:50%;width:22px;height:22px;display:grid;place-items:center;flex:none}
+.scene{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:24px;padding:22px 24px;min-height:216px}
+.scene>*{min-width:0}
+.badge{display:inline-block;background:var(--soft);color:var(--blue);border-radius:5px;padding:3px 7px;font-size:.67rem;font-weight:700;margin-bottom:10px}
+.badge.gate{background:#fff4df;color:var(--amber)}
+h2{font-size:1.45rem;line-height:1.2;margin-bottom:12px}
+.explanation{font-size:.9rem;color:var(--muted);max-width:430px}
+.task{font-size:.81rem;margin-top:16px;padding-left:12px;border-left:2px solid var(--line)}
+.task b{display:block;margin-bottom:3px}
+.btn{border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:8px 13px;font-size:.8rem;min-height:40px}
+.btn:hover:not(:disabled){background:var(--soft);border-color:var(--blue)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:white}
+.btn.primary:hover:not(:disabled){background:#123da6}
+.scene-footer{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 24px;border-top:1px solid var(--line)}
+.progress{color:var(--muted);font-size:.75rem;font-variant-numeric:tabular-nums}
+.nav-buttons{display:flex;gap:8px}
+.boundary{display:flex;gap:10px;margin:14px 0 18px;padding:10px 12px;border:1px solid #d4e7dc;border-radius:10px;background:#f0f7f3;color:var(--muted);font-size:.73rem}
+.boundary .icon{color:var(--green)}
+.boundary b{color:var(--ink);white-space:nowrap}
+.extras{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+details{background:white;border:1px solid var(--line);border-radius:12px;min-width:0}
+summary{padding:15px 18px;cursor:pointer;font-size:.87rem;font-weight:600}
+summary:hover{color:var(--blue)}
+.details-body{padding:0 18px 18px}
+.roles{display:grid;grid-template-columns:70px 1fr;gap:12px 14px;font-size:.8rem}
+.roles dt{font-weight:700}.roles dd{margin:0;color:var(--muted)}
+.roles a{display:inline-block;font-size:.74rem}
+.prompt-label{font-size:.78rem;color:var(--muted);display:block;margin-bottom:8px}
+textarea{width:100%;resize:vertical;min-height:190px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#f7f9fc;color:var(--ink);font:12px/1.6 var(--mono)}
+.prompt-footer{display:flex;gap:10px;align-items:center;margin-top:10px}
+#copy-status{font-size:.75rem;color:var(--muted);overflow-wrap:anywhere}
+footer{padding:16px 0 20px;border-top:1px solid var(--line);font-size:.7rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.footer-note small{display:block;margin-top:3px;font-size:.66rem}
+.footer-links{display:flex;align-items:center;gap:24px}
+noscript p{background:#fff4df;padding:20px}
+@media(min-width:701px){
+  .case-active header{padding:8px 0}.case-active h1{font-size:2.3rem}
+  .case-active .intro{max-width:none}.case-active .agent{margin-top:10px}
+  .case-active .journey-top{padding:9px 24px}.case-active .rail{padding-top:8px}
+  .case-active .scene{padding:12px 24px}.case-active .scene-footer{padding:8px 24px}
+  .case-active .boundary{margin:10px 0 12px;padding:8px 12px}
+}
+@media(max-width:700px){
+  .wrap{padding:0 18px}.masthead{padding-top:18px}
+  header{padding:25px 0}.workflow-grid{grid-template-columns:1fr 1fr}
+  .journey-top{padding:14px 16px}.rail{padding:12px 16px 0;gap:6px}
+  .rail button{flex-direction:column;gap:6px;font-size:.72rem;text-align:center}
+  .scene{grid-template-columns:1fr;gap:18px;padding:22px 16px;min-height:0}
+  .scene-footer{padding:14px 16px}.extras{grid-template-columns:1fr}
+  .agent-overview{grid-template-columns:1fr}.agent-map,.usage{padding:16px}
+  .connections{gap:10px}.capability{padding:12px 7px}
+  .map-heading{flex-wrap:wrap;gap:5px}
+  .boundary{display:block}.boundary b{display:block;margin-bottom:3px}
+  .boundary .icon{float:left;margin-right:7px}
+  .footer-links{flex-wrap:wrap;gap:16px}
+  footer{flex-wrap:wrap}.intro{font-size:.92rem}
+}
+</style>
+<link rel="stylesheet" href="presentation-assets/copilot-example.css" />
+</head>
+<body>
+<a class="skip" href="#guide">Skip to the interactive guide</a>
+<svg class="icon-library" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a5 5 0 0 1-1-10 7 7 0 0 1 13 2 4 4 0 0 1-1 8Z"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 5v15M12 5C8 2 3 4 3 4v14s5-2 9 2c4-4 9-2 9-2V4s-5-2-9 1Z"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></symbol>
+<symbol id="i-robot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M12 7V3m-3 14h6M1 11v5m22-5v5"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5h7l2 3h9v12H3Z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 16v-5m5 5V7m5 9V4"/></symbol>
+<symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h5l3-8 4 16 3-8h5"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="m8 6-6 6 6 6m8-12 6 6-6 6M14 3l-4 18"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Zm-4 9 3 3 5-6"/></symbol>
+</defs></svg>
+<div class="wrap">
+  <div class="masthead"><span class="brand-name"><img src="presentation-assets/azure-ai-search.svg" alt="Azure AI Search" width="28" height="28" /><span translate="no">Azure AI Search</span></span> <span>&amp;</span> <span class="brand-name"><img src="presentation-assets/github-mark.svg" alt="GitHub" width="28" height="28" /><span translate="no">GitHub Copilot</span></span> <span>/ Field Guide</span></div>
+  <header>
+    <h1>Investigate. Prove. Reuse.</h1>
+    <p class="intro">One agent follows your question from the first hypothesis to a saved case. Skills provide the procedure; you approve the measurements.</p>
+    <div class="agent"><a id="agent-link" href=".github/agents/azure-ai-search-engineer.agent.md"><code translate="no">azure-ai-search-engineer</code></a><span>Same agent. No handoffs.</span></div>
+  </header>
+  <main id="guide">
+      <div class="view-switch" role="group" aria-label="Guide view">
+      <button id="agent-view-button" type="button" data-view="agent" aria-controls="agent-view" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>Agent & access</button>
+      <button id="case-view-button" type="button" data-view="case" aria-controls="case-view" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Follow a case</button>
+    </div>
+    <section id="agent-view" aria-label="Agent, tools and access">
+      <div class="agent-overview">
+        <div class="agent-map">
+          <div class="map-heading"><h2>One engineer, connected capabilities</h2><span>Select a node</span></div>
+          <div class="connections" role="group" aria-label="Agent capability map">
+            <div class="node-column">
+              <button class="capability" type="button" data-capability="azure" aria-pressed="true" aria-controls="access-detail"><strong><svg class="icon" aria-hidden="true"><use href="#i-cloud"/></svg>Azure MCP</strong><span>Resources & telemetry</span></button>
+              <button class="capability" type="button" data-capability="learn" aria-pressed="false" aria-controls="access-detail"><strong><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Microsoft Learn</strong><span>Official documentation</span></button>
+            </div>
+            <div class="engineer-node">
+              <div class="engineer-icon" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-robot"/></svg></div>
+              <strong>Azure AI Search<br />Engineer</strong>
+              <span>Routes · investigates<br />reviews · saves</span>
+            </div>
+            <div class="node-column">
+              <button class="capability" type="button" data-capability="skills" aria-pressed="false" aria-controls="access-detail"><strong><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg>Skills & SDK</strong><span>Procedures & Python</span></button>
+              <button class="capability" type="button" data-capability="workspace" aria-pressed="false" aria-controls="access-detail"><strong><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>Workspace</strong><span>Scripts & saved cases</span></button>
+            </div>
+          </div>
+          <div class="access-detail" id="access-detail" role="region" aria-label="Selected capability and access" aria-live="polite"></div>
+          <p class="access-note">Declared capabilities, not a live access check. Enable tools and verify the Azure identity and permissions.</p>
+        </div>
+        <aside class="usage" aria-label="How to use the agent">
+          <h2>Use it in VS Code</h2>
+          <ol>
+            <li><b>Select the engineer</b><span>Choose <code translate="no">azure-ai-search-engineer</code> in the Copilot agent picker.</span></li>
+            <li><b>Describe the case</b><span>Share the environment, target, API version and sanitized request or error.</span></li>
+            <li><b>Approve, then inspect</b><span>Review the plan before remote calls. Ask for evidence, then <code translate="no">/save-search-case</code>.</span></li>
+          </ol>
+          <button class="btn primary" id="choose-workflow" type="button"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>Choose a workflow</button>
+          <button class="btn" id="get-prompt" type="button"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Get a starter prompt</button>
+        </aside>
+      </div>
+    </section>
+    <section id="case-view" aria-label="Case workflow guide" hidden>
+    <h2 class="section-label">Choose a problem, then follow the investigation</h2>
+    <div class="workflow-grid" id="workflows" role="group" aria-label="Investigation workflow"></div>
+    <section class="journey" aria-label="Investigation walkthrough">
+      <div class="journey-top"><p id="scenario-label"></p><a class="skill-link" id="skill-link" translate="no"></a></div>
+      <ol class="rail" id="rail" aria-label="Investigation steps"></ol>
+      <div class="scene">
+        <div>
+          <span class="badge" id="step-badge"></span>
+          <h2 id="step-title"></h2>
+          <p class="explanation" id="step-description"></p>
+          <div class="task"><b>Your part</b><span id="your-part"></span></div>
+        </div>
+        <div class="example" id="example" role="region" aria-label="Illustrative example"></div>
+      </div>
+      <div class="scene-footer">
+        <span class="progress" id="progress" role="status" aria-live="polite"></span>
+        <div class="nav-buttons"><button class="btn" type="button" id="back">Back</button><button class="btn primary" type="button" id="next">Next step</button></div>
+      </div>
+    </section>
+    </section>
+    <p class="boundary"><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg><b>Safety stays constant.</b><span>UAT/PROD: read-only. Writes: approved Sandbox only. Never expose secrets. Tool availability is not permission.</span></p>
+    <div class="extras">
+      <details id="toolbox">
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>Files & setup</summary>
+        <div class="details-body">
+          <dl class="roles">
+            <dt>Rules</dt><dd>Set safety and evidence standards.<br /><a href=".github/copilot-instructions.md">Workspace instructions</a></dd>
+            <dt>Agent</dt><dd>Chooses the skill, conducts the case and checks the evidence.</dd>
+            <dt>Skills</dt><dd>Load the relevant workflow. Labs and Python SDK support are optional.<br /><a id="lab-link">Lab skill</a> · <a id="sdk-link">Microsoft Python skill</a></dd>
+            <dt>Tools</dt><dd>Azure MCP reads resources; Learn confirms documented behavior. Exact REST/SDK requests fill gaps.<br /><a href=".github/README.md">Access and setup</a></dd>
+            <dt>Memory</dt><dd>Save evidence first. Propose method improvements separately.<br /><a id="save-link">/save-search-case</a> · <a id="retro-link">/retro</a></dd>
+          </dl>
+        </div>
+      </details>
+      <details id="starter">
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Try it in Copilot</summary>
+        <div class="details-body">
+          <label class="prompt-label" for="starter-prompt">Select the engineer agent, then paste this starter prompt.</label>
+          <textarea id="starter-prompt" name="starter-prompt" readonly spellcheck="false" aria-describedby="copy-status"></textarea>
+          <div class="prompt-footer"><button class="btn" type="button" id="copy-prompt">Copy starter prompt</button><span id="copy-status" role="status" aria-live="polite"></span></div>
+        </div>
+      </details>
+    </div>
+    <noscript><p>Enable JavaScript to explore the walkthrough, or read the <a href=".github/README.md">methodology and setup guide</a>.</p></noscript>
+  </main>
+  <footer><div class="footer-note"><span>Examples explain the method; they are not measured results.</span><small>Independent project. Not affiliated with or endorsed by Microsoft.</small></div><div class="footer-links"><a href=".github/azure-ai-search-method.md">Read the full method</a><img src="presentation-assets/microsoft-logo.png" alt="Microsoft" width="108" height="23" loading="lazy" /></div></footer>
+</div>
+<script>
+'use strict';
+/*SKILL_FILES:BEGIN*/const SOURCES = [{"path":".github/agents/azure-ai-search-engineer.agent.md","name":"azure-ai-search-engineer","description":"Investigate Azure AI Search indexers, queries, relevance benchmarks and capacity using approved measurements, Azure MCP and Microsoft Learn. Build optional read-only labs and preserve reusable cases.","tools":["read","search","edit","execute","web","todo","azure/search","azure/monitor","azure/kusto","azure/resourcehealth","microsoft-docs/*"]},{"path":".github/skills/diagnose-indexer/SKILL.md","name":"diagnose-indexer","description":"Use when diagnosing Azure AI Search indexer failures, connectivity, authentication, data sources, field mappings, output mappings, skillsets, enrichment or execution history. Produce a read-only evidence-backed diagnosis."},{"path":".github/skills/analyze-query/SKILL.md","name":"analyze-query","description":"Use when explaining Azure AI Search query behavior, unexpected matches, missing documents, ranking, filters, analyzers, fuzzy/n-gram, scoring profiles, semantic ranker or hybrid/vector retrieval. Reproduce the exact request and isolate causes."},{"path":".github/skills/benchmark-relevance/SKILL.md","name":"benchmark-relevance","description":"Use when running Azure AI Search golden queries, comparing ranking configurations, computing NDCG, MRR, precision or recall, and checking relevance regressions. Requires explicit judgments and comparable measured runs."},{"path":".github/skills/review-capacity/SKILL.md","name":"review-capacity","description":"Use when reviewing Azure AI Search performance, document/vector volume, latency, throttling, replicas, partitions, tier, index characteristics or indexing/query contention. Produce recommendations from authorized telemetry."},{"path":".github/skills/build-search-lab/SKILL.md","name":"build-search-lab","description":"Use when building a read-only interactive Azure AI Search lab, Today vs Proposal comparison, or visualization of saved indexer/capacity evidence. Reuse lab-kit and validate with a stubbed smoke test; never run writes or load tests."},{"path":".github/skills/azure-search-documents-py/SKILL.md","name":"azure-search-documents-py","description":"Azure AI Search SDK for Python. Use for vector search, hybrid search, semantic ranking, indexing, and skillsets. Triggers: \"azure-search-documents\", \"SearchClient\", \"SearchIndexClient\", \"vector search\", \"hybrid search\", \"semantic search\"."},{"path":".github/prompts/save-search-case.prompt.md","name":"save-search-case","description":"Document and preserve an Azure AI Search investigation, its evidence and reproduction steps, and update the reusable case catalog. Supports complete, inconclusive and blocked cases without committing."},{"path":".github/prompts/retro.prompt.md","name":"retro","description":"Propose small, evidence-backed improvements to Azure AI Search workflows, lab templates or checks from a saved case. Wait for approval before editing; never commit automatically."}];/*SKILL_FILES:END*/
+const $ = id => document.getElementById(id);
+const sourceBase = document.querySelector('meta[name="source-base"]')?.content || '';
+const sourceUrl = file => sourceBase + file;
+const esc = value => String(value).replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
+const WORKFLOWS = [
+  { id:'diagnose-indexer', title:'Indexer fails', subtitle:'Trace the failing stage', question:'Why did this indexer stop processing documents?', context:'Indexer, execution history, sanitized error and data source type.', hypotheses:['Source access is failing.', 'A mapping or enrichment step is failing.'], tests:['Inspect authorized execution history.', 'Check identity, mappings and skill inputs.'], measure:'Find the failing stage', outcome:'A diagnosis, rejected alternatives and a repair path.', lab:'Show saved execution and mapping evidence. No run/reset controls.' },
+  { id:'analyze-query', title:'Results look wrong', subtitle:'Explain matching and ranking', question:'Why does this query return an unexpected document?', context:'Exact request, expected documents, actual results and API version.', hypotheses:['Query expansion admits an unwanted match.', 'A filter or scoring rule changes the result.'], tests:['Replay the captured request unchanged.', 'Change one field, operator or profile at a time.'], measure:'Prove why it matched', outcome:'A proven mechanism and checks for queries that must still work.', lab:'Compare Today vs Proposal, with exact requests and clear provenance.' },
+  { id:'benchmark-relevance', title:'Compare relevance', subtitle:'Evaluate with judged queries', question:'Does the proposal improve the golden query set?', context:'Golden queries, relevance judgments, cutoff K and comparable configurations.', hypotheses:['The proposal improves relevant results.', 'The apparent gain hides regressions in some queries.'], tests:['Run both configurations against the same data.', 'Score NDCG, MRR, precision and judged-pool recall.'], measure:'Measure gains and regressions', outcome:'Per-query metrics, judgment coverage and an acceptance verdict.', lab:'Inspect ranked results side by side. Overlap is not a relevance judgment.' },
+  { id:'review-capacity', title:'Search feels slow', subtitle:'Use workload and telemetry', question:'What explains latency during the observed peak?', context:'Service/index inventory, workload, UTC time window and latency goal.', hypotheses:['Expensive queries create pressure.', 'Indexing and querying compete on a shared service.'], tests:['Read authorized latency, load and error telemetry.', 'Correlate the workload and inspect query/schema cost.'], measure:'Find the measured bottleneck', outcome:'A capacity recommendation with tradeoffs and explicit evidence gaps.', lab:'Visualize saved telemetry. No load tests or scaling controls.' },
+];
+const STEPS = ['Context', 'Plan', 'Measure', 'Lab', 'Save'];
+const params = new URL(location.href).searchParams;
+let workflow = WORKFLOWS.find(item => item.id === params.get('workflow')) || WORKFLOWS[1];
+let step = /^[1-5]$/.test(params.get('step') || '') ? Number(params.get('step')) - 1 : 0;
+let approved = false;
+let guideView = params.get('view') === 'case' ? 'case' : 'agent';
+let capability = ['azure', 'learn', 'skills', 'workspace'].includes(params.get('capability')) ? params.get('capability') : 'azure';
+let chatTheme = params.get('chatTheme') === 'light' ? 'light' : 'dark';
+let previewOpen = params.get('labPreview') === 'open';
+
+function sourceLink(element, name){
+  const source = SOURCES.find(item => item.name === name);
+  if (!source) throw new Error(`Missing guide metadata: ${name}. Run node update-explainer.cjs.`);
+  element.href = sourceUrl(source.path);
+  element.title = source.description;
+}
+function syncUrl(){
+  const url = new URL(location.href);
+  url.searchParams.set('workflow', workflow.id);
+  url.searchParams.set('step', String(step + 1));
+  url.searchParams.set('view', guideView);
+  url.searchParams.set('capability', capability);
+  url.searchParams.set('chatTheme', chatTheme);
+  if (previewOpen) url.searchParams.set('labPreview', 'open');
+  else url.searchParams.delete('labPreview');
+  for (const name of ['toolbox', 'starter']) {
+    if ($(name).open) url.searchParams.set(name, 'open');
+    else url.searchParams.delete(name);
+  }
+  if (url.hash && !document.getElementById(url.hash.slice(1))) url.hash = '';
+  history.replaceState(null, '', url.href);
+}
+function list(items){ return `<ul class="chat-list">${items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>`; }
+function icon(name){ return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
+function chatMessage(role, content){
+  const user = role === 'user';
+  return `<div class="chat-message ${role}"><span class="chat-avatar" aria-hidden="true">${user ? 'U' : 'AI'}</span><div><p class="chat-author">${user ? 'You' : 'GitHub Copilot'}</p><div class="chat-content">${content}</div></div></div>`;
+}
+function labPreview(){
+  const comparison = ['analyze-query', 'benchmark-relevance'].includes(workflow.id);
+  const left = comparison ? ['Example document', 'Additional match'] : workflow.id === 'diagnose-indexer' ? ['Execution history', 'Field mapping'] : ['Latency window', 'Workload context'];
+  const right = comparison ? ['Example document', 'Regression check'] : ['Hypothesis status', 'Evidence limits'];
+  const a = comparison ? 'A · Today' : 'Saved evidence';
+  const b = comparison ? 'B · Proposal' : 'Interpretation';
+  const request = proposal => esc(JSON.stringify({ search: '<query>', queryType: 'simple', ...(proposal ? { searchFields: '<field>' } : {}) }, null, 2));
+  const sidebar = comparison ? `<div><b>Queries</b><pre>example query</pre><b>${a} <span class="mini-pill">assumption</span></b><pre>${request(false)}</pre></div><div><b>${b} <span class="mini-pill proposal">proposal</span></b><pre>${request(true)}</pre></div>` : `<div><b>Source</b><pre>&lt;case&gt;/results/&lt;file&gt;.json</pre><b>Saved evidence only</b><p>No execution or scaling controls.</p></div><div><b>Review</b><p>Hypotheses, sources and limitations.</p></div>`;
+  const tabs = comparison ? ['Side by side', 'Matrix', 'Why it matched', 'Analyzer', 'Requests / parity'] : ['Evidence', 'Hypotheses', 'Limits'];
+  const column = (title, items) => `<div><b>${title}</b>${items.map((item, index) => `<div class="mini-doc"><span>#${index + 1}</span><strong>${esc(item)}</strong><small>${comparison ? 'Illustrative result · score —' : 'Illustrative evidence · not measured'}</small></div>`).join('')}</div>`;
+  return `<details id="lab-preview" class="chat-tool"${previewOpen ? ' open' : ''}><summary>Lab preview · illustrative</summary><div class="mini-lab"><div class="mini-head"><strong>Search Lab</strong><span>Read-only</span><div class="mini-controls"><button type="button" disabled>JSON</button><button type="button" disabled>Markdown</button>${comparison ? '<button type="button" disabled>Run comparison</button>' : ''}</div></div><div class="mini-config"><span>Service <code>example-service</code></span><span>Index <code>example-index</code></span><span>api-version <code>&lt;version&gt;</code></span></div><div class="mini-layout"><aside class="mini-sidebar">${sidebar}<div class="mini-limits"><b>What this lab does not prove</b><p>No real service results or relevance gains.</p></div></aside><div class="mini-main"><div class="mini-grid"><div class="mini-score a"><b>${a}</b><strong>—</strong><small>${comparison ? 'Matches · assumption' : 'Sanitized source'}</small></div><div class="mini-score b"><b>${b}</b><strong>—</strong><small>${comparison ? 'Matches · proposal' : 'Verdict and limits'}</small></div></div><div class="mini-tabs" aria-label="Illustrative lab tabs">${tabs.map((tab, index) => `<span${index === 0 ? ' class="active"' : ''}>${tab}</span>`).join('')}</div><div class="mini-results">${column(a, left)}${column(b, right)}</div></div></div><p class="mini-note">Synthetic illustration based on the lab template. Controls are disabled; no calls or downloads.</p></div></details>`;
+}
+function applyChatTheme(){
+  $('example').dataset.theme = chatTheme;
+  const button = $('chat-theme');
+  button.textContent = chatTheme === 'dark' ? 'Light' : 'Dark';
+  button.setAttribute('aria-label', `Switch chat to ${chatTheme === 'dark' ? 'light' : 'dark'} theme`);
+}
+function chatExample(){
+  const requests = [
+    workflow.question,
+    'Propose a plan. Wait for my approval before remote calls.',
+    approved ? 'Approved. Reproduce first, then isolate the cause.' : 'Can we run the measurements now?',
+    'Would an interactive lab help explain this case?',
+    '/save-search-case <case-folder>',
+  ];
+  let response;
+  if (step === 0) {
+    response = `<p>I need ${esc(workflow.context.charAt(0).toLowerCase() + workflow.context.slice(1))}</p><span class="chat-skill" translate="no">Skill: ${esc(workflow.id)}</span>`;
+  } else if (step === 1) {
+    response = `<p>I'll test these competing hypotheses:</p>${list(workflow.hypotheses)}<p style="margin-top:7px"><span class="pill${approved ? ' ok' : ''}">${approved ? 'Demo plan approved' : 'Waiting for approval'}</span></p><button class="btn primary demo-action" id="approve-demo" type="button"${approved ? ' disabled' : ''}>${approved ? 'Approved in this demo' : 'Approve demo plan'}</button>`;
+  } else if (step === 2) {
+    const activity = workflow.id === 'review-capacity' ? 'Azure MCP: inspect telemetry' : workflow.id === 'benchmark-relevance' ? 'Local script: score judged queries' : workflow.id === 'diagnose-indexer' ? 'REST / SDK: read indexer history' : 'REST / SDK: reproduce the exact request';
+    const mock = {
+      'diagnose-indexer': { stage: 'document indexing', status: 'failed', error: 'Field category expects a string; source value is an object.', alternative: 'Source authentication succeeded in this mock.', next: 'Inspect the mapping; validate a repair only in an approved Sandbox.' },
+      'analyze-query': { reproduced: true, document: 'doc-example', matchedField: 'title', cause: 'Fuzzy expansion admitted a nearby token in the mock indexed text.', isolation: 'Removing the fuzzy operator removes this mock match.', regression: 'Exact-query and filter checks still required.' },
+      'benchmark-relevance': { judgments: 'explicit synthetic document grades', baseline: ['doc-unrelated', 'doc-relevant'], proposal: ['doc-relevant', 'doc-unrelated'], finding: 'The relevant document moves first in this illustrative query.', verdict: 'Not proof of overall improvement; inspect per-query regressions.' },
+      'review-capacity': { window: 'synthetic peak interval', observation: 'Mock throttling coincides with indexing and query traffic.', attribution: 'Correlation only; no bottleneck confirmed.', next: 'Inspect request cost and aligned telemetry before recommending capacity changes.' },
+    }[workflow.id];
+    response = approved ? `<p>Reproduce first. Save evidence before drawing conclusions.</p><details class="chat-tool"><summary>${esc(activity)}</summary><div class="chat-tool-body">${list(workflow.tests)}<p>Illustrative tool activity only. Nothing was executed.</p></div></details><p><b>Mock output — synthetic, not measured</b></p><pre class="mock-output">${esc(JSON.stringify(mock, null, 2))}</pre><p>${esc(workflow.outcome)} These examples do not establish real findings or improvements.</p>` : `<p>No calls. No invented results. I need your approved plan before remote measurements.</p><button class="btn demo-action" id="return-plan" type="button">Review the plan</button>`;
+  } else if (step === 3) {
+    response = `<span class="chat-skill" translate="no">Skill: build-search-lab</span><p style="margin-top:7px">${esc(workflow.lab)}</p>${labPreview()}<button class="btn demo-action" id="skip-lab" type="button">Skip lab, go to save</button>`;
+  } else {
+    response = `<p>A saved case would preserve these artifacts:</p><ul class="chat-files"><li><code>README.md</code> · verdict and reproduction</li><li><code>results/</code> · traceable evidence</li><li><code>CASE-CATALOG.md</code> · find the case later</li></ul><p>Keep inconclusive findings. Offer <code>/retro</code> separately; no automatic commits.</p>`;
+  }
+  return `<div class="chat-header"><b>GitHub Copilot</b><span>Illustrative example · offline</span><button id="chat-theme" class="chat-theme" type="button"></button></div><div class="chat-thread" tabindex="0" role="region" aria-label="Simulated Copilot conversation">${chatMessage('user', `<p>${esc(requests[step])}</p>`)}${chatMessage('copilot', response)}</div><div class="chat-composer" aria-label="Illustrative composer, not connected"><p>Ask a follow-up… (demo only)</p><div class="chat-composer-bottom"><span class="chat-agent" translate="no">Agent · azure-ai-search-engineer</span><button class="chat-send" type="button" disabled aria-label="Send unavailable in this offline demonstration" title="This example is not connected to Copilot."><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 14V2M3 7l5-5 5 5" /></svg></button></div></div>`;
+}
+function renderAccess(){
+  const agent = SOURCES.find(item => item.name === 'azure-ai-search-engineer');
+  if (!agent || !Array.isArray(agent.tools)) throw new Error('Missing agent tools. Run node update-explainer.cjs.');
+  const content = {
+    azure:{ title:'Azure resources, within approved access', text:'Read service/index definitions, supported queries and authorized telemetry through Search, Monitor, Kusto and resource health. Discover supported commands first; use exact REST/SDK requests when a tool cannot reproduce the request.', tools:agent.tools.filter(tool => tool.startsWith('azure/')) },
+    learn:{ title:'Official knowledge, not private project data', text:'Search Microsoft Learn, fetch full pages and consult code samples to confirm API/SDK behavior. Cite sources. Documentation access does not grant access to your Azure resources; never send secrets or private documents.', tools:agent.tools.filter(tool => tool.startsWith('microsoft-docs/')) },
+    skills:{ title:'Load the procedure, not another agent', text:'Choose indexer diagnosis, query analysis, relevance benchmarking or capacity review. Add the read-only lab skill or Microsoft Python SDK guidance only when useful. Skills do not install packages or grant permissions.', names:[...WORKFLOWS.map(item => item.id), 'build-search-lab', 'azure-search-documents-py'] },
+    workspace:{ title:'Read context and preserve evidence locally', text:'Read authorized project files and saved cases; write measurement scripts, results and case reports. Run approved scripts locally. Runtime code loads credentials; the agent must not inspect secret files. Saving does not commit automatically.', tools:agent.tools.filter(tool => !tool.includes('/')) },
+  }[capability];
+  $('access-detail').innerHTML = `<h3>${esc(content.title)}</h3><p>${esc(content.text)}</p><div class="tool-tokens">${content.tools ? content.tools.map(tool => `<code translate="no">${esc(tool)}</code>`).join('') : content.names.map(name => {
+    const source = SOURCES.find(item => item.name === name);
+    if (!source) throw new Error(`Missing skill metadata: ${name}`);
+    return `<a href="${esc(sourceUrl(source.path))}" title="${esc(source.description)}" translate="no">${esc(name)}</a>`;
+  }).join(' · ')}</div>`;
+  $('agent-view').querySelectorAll('[data-capability]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.capability === capability)));
+}
+function showView(view){
+  guideView = view;
+  document.body.classList.toggle('case-active', view === 'case');
+  $('agent-view').hidden = view !== 'agent';
+  $('case-view').hidden = view !== 'case';
+  document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+  syncUrl();
+}
+function render(){
+  $('workflows').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.workflow === workflow.id)));
+  $('rail').querySelectorAll('button').forEach((button, index) => {
+    if (index === step) button.setAttribute('aria-current', 'step');
+    else button.removeAttribute('aria-current');
+  });
+  $('scenario-label').textContent = workflow.title;
+  $('skill-link').textContent = workflow.id;
+  sourceLink($('skill-link'), workflow.id);
+  const scenes = [
+    { badge:'Start with the question', title:'Clarify before calling tools.', text:'Check saved cases, gather context and select a skill. Keep missing facts explicit.', part:'Share expected versus actual behavior. Do not preselect the answer.' },
+    { badge:'Approval checkpoint', title:'Agree on how to test.', text:'Propose hypotheses, acceptance criteria and a bounded plan. Remote calls wait for your approval.', part:'Approve the scope, request budget and checks that must not regress.' },
+    { badge:approved ? 'Evidence, not intuition' : 'Approval required', title:approved ? workflow.measure + '.' : 'Measurements wait for approval.', text:approved ? 'Reproduce, isolate variables and save dated evidence. Azure tools measure; Learn confirms API behavior.' : 'The demo grants no Azure access. A real investigation waits for your approved plan.', part:approved ? 'Check the evidence and limitations, not just a better-looking result.' : 'Return to the plan to simulate approval.' },
+    { badge:'Optional step', title:'Show it only if it helps.', text:'Use build-search-lab when interaction helps. Validate with a stub; distinguish UI checks from real evidence.', part:'Choose a lab when interaction adds value. Otherwise, skip it.' },
+    { badge:'Durable case, optional retro', title:'Save the answer and its limits.', text:'Use /save-search-case to preserve the verdict and catalog. /retro proposes lessons and waits for approval.', part:'Keep inconclusive cases too. Saving a case does not commit or change a skill.' },
+  ];
+  const scene = scenes[step];
+  $('step-badge').textContent = scene.badge;
+  $('step-badge').classList.toggle('gate', step === 1 || (step === 2 && !approved));
+  $('step-title').textContent = scene.title;
+  $('step-description').textContent = scene.text;
+  $('your-part').textContent = scene.part;
+  $('example').innerHTML = chatExample();
+  $('example').classList.toggle('lab-open', step === 3 && previewOpen);
+  applyChatTheme();
+  $('chat-theme').onclick = () => { chatTheme = chatTheme === 'dark' ? 'light' : 'dark'; applyChatTheme(); syncUrl(); };
+  const preview = $('lab-preview');
+  if (preview) preview.addEventListener('toggle', () => { previewOpen = preview.open; $('example').classList.toggle('lab-open', previewOpen); syncUrl(); });
+  $('progress').textContent = `Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`;
+  $('back').disabled = step === 0;
+  $('next').disabled = step === 1 && !approved;
+  $('next').textContent = step === 4 ? 'Restart walkthrough' : step === 1 && !approved ? 'Approve to explore' : 'Next step';
+  $('starter-prompt').value = `Use the ${workflow.id} skill.\nCase: <case-folder>\nEnvironment and target: <service/index/indexer>\nAPI version: <version>\nQuestion: ${workflow.question}\nExpected versus actual: <describe>\nCaptured evidence: <sanitized request/error/judgments/telemetry>\n\nConsult relevant saved cases. Propose hypotheses, acceptance criteria and a bounded plan. Wait for approval before remote calls.`;
+  const approve = $('approve-demo');
+  if (approve) approve.onclick = () => { approved = true; render(); $('next').focus(); };
+  const review = $('return-plan');
+  if (review) review.onclick = () => { step = 1; render(); $('approve-demo').focus(); };
+  const skip = $('skip-lab');
+  if (skip) skip.onclick = () => { step = 4; render(); $('next').focus(); };
+  syncUrl();
+}
+$('workflows').innerHTML = WORKFLOWS.map((item, index) => `<button class="workflow" type="button" data-workflow="${item.id}" aria-pressed="false"><strong>${icon(['folder', 'search', 'chart', 'pulse'][index])}${esc(item.title)}</strong><span>${esc(item.subtitle)}</span></button>`).join('');
+$('workflows').querySelectorAll('button').forEach(button => button.onclick = () => {
+  workflow = WORKFLOWS.find(item => item.id === button.dataset.workflow);
+  step = 0; approved = false; previewOpen = false; $('copy-status').textContent = ''; render();
+});
+$('rail').innerHTML = STEPS.map((name, index) => `<li><button type="button" data-step="${index + 1}" aria-label="Step ${index + 1}: ${name}${name === 'Lab' ? ' (optional)' : ''}"><span class="step-number" aria-hidden="true">${index + 1}</span>${name}</button></li>`).join('');
+$('rail').querySelectorAll('button').forEach(button => button.onclick = () => { step = Number(button.dataset.step) - 1; render(); });
+$('back').onclick = () => { step--; render(); };
+$('next').onclick = () => { if (step === 4) { step = 0; approved = false; } else step++; render(); };
+for (const [element, name] of [['agent-link', 'azure-ai-search-engineer'], ['lab-link', 'build-search-lab'], ['sdk-link', 'azure-search-documents-py'], ['save-link', 'save-search-case'], ['retro-link', 'retro']]) sourceLink($(element), name);
+document.querySelectorAll('[data-view]').forEach(button => button.onclick = () => showView(button.dataset.view));
+$('agent-view').querySelectorAll('[data-capability]').forEach(button => button.onclick = () => {
+  capability = button.dataset.capability; renderAccess(); syncUrl();
+});
+$('choose-workflow').onclick = () => { showView('case'); $('workflows').querySelector('[aria-pressed="true"]').focus(); };
+$('get-prompt').onclick = () => { $('starter').open = true; $('starter-prompt').focus(); };
+for (const name of ['toolbox', 'starter']) {
+  $(name).open = params.get(name) === 'open';
+  $(name).addEventListener('toggle', syncUrl);
+}
+$('copy-prompt').onclick = async () => {
+  const text = $('starter-prompt').value;
+  $('copy-prompt').disabled = true;
+  try {
+    if (!navigator.clipboard) throw new Error('Clipboard unavailable.');
+    await navigator.clipboard.writeText(text);
+    $('copy-status').textContent = 'Starter prompt copied.';
+  } catch (error) {
+    $('copy-status').textContent = `${error.message} Select the prompt and copy it manually.`;
+    $('starter-prompt').focus(); $('starter-prompt').select();
+  } finally { $('copy-prompt').disabled = false; }
+};
+render();
+renderAccess();
+showView(guideView);
+</script>
+</body>
+</html>

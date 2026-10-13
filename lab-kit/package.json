@@ -1,0 +1,12 @@
+{
+  "name": "lab-kit",
+  "private": true,
+  "description": "Runtime + tooling for Azure AI Search labs. Canonical source: .github/skills/build-search-lab/assets/lab-kit",
+  "scripts": {
+    "test": "node --test methodology.test.cjs ../.github/skills/benchmark-relevance/scripts/score-relevance.test.cjs",
+    "validate": "node ../.github/skills/build-search-lab/scripts/validate-lab.cjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

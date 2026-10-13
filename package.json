@@ -1,0 +1,13 @@
+{
+  "name": "azure-ai-search-debug-evaluation",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build:pages": "node build-pages.cjs",
+    "test": "node --test lab-kit/methodology.test.cjs .github/skills/benchmark-relevance/scripts/score-relevance.test.cjs",
+    "update-guide": "node update-explainer.cjs",
+    "score:relevance": "node .github/skills/benchmark-relevance/scripts/score-relevance.cjs"
+  }
+}

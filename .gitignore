@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+test-search.config.js
+test-search.config.js.*
+!test-search.config.example.js
+.vscode/
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+*.bak
+local-cases/
+_site/
+methodology-*-fixture-lab.html
