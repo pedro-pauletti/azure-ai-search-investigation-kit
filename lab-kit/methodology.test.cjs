@@ -61,6 +61,7 @@ test('Pages build includes only the presentation and public assets with valid ho
   assert.match(html, /name="source-base" content="https:\/\/github\.com\/pedro-pauletti\/azure-ai-search-investigation-kit\/blob\/main\/"/);
   assert.doesNotMatch(html, /href="\.github\//);
   assert.match(html, /href="https:\/\/github\.com\/pedro-pauletti\/azure-ai-search-investigation-kit\/blob\/main\/\.github\/README.md"/);
+  assert.match(html, /href="https:\/\/github\.com\/pedro-pauletti\/azure-ai-search-investigation-kit\/blob\/main\/README.md#adapt-to-claude-code-or-cursor"/);
   assert.deepEqual(fs.readdirSync(relative('_site')).sort(), ['index.html', 'presentation-assets', 'search-lab-explained.html']);
   assert.deepEqual(fs.readdirSync(relative('_site/presentation-assets')).sort(), ['azure-ai-search.svg', 'copilot-example.css', 'github-mark.svg', 'microsoft-logo.png']);
   for (const match of html.matchAll(/(?:src|href)="(presentation-assets\/[^"]+)"/g)) {
@@ -138,7 +139,7 @@ test('compact guide embeds current discovery metadata, not source bodies, and st
       assert.deepEqual(Object.keys(source).sort(), ['description', 'name', 'path']);
     }
   }
-  assert.ok(Buffer.byteLength(html, 'utf8') < 48000, 'Guide markup must remain below 48 KB; keep example styling in local assets and do not re-embed source documents.');
+  assert.ok(Buffer.byteLength(html, 'utf8') < 50000, 'Guide markup including assistant adaptation must remain below 50 KB; keep styling in local assets and do not re-embed source documents.');
   const stylesheets = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual(stylesheets, ['presentation-assets/copilot-example.css']);
   assert.ok(fs.existsSync(relative(stylesheets[0])));
@@ -270,6 +271,46 @@ test('capability map shows the agent, configured tools, access boundaries and us
   }
 });
 
+test('assistant adaptation instructions expand, persist and remain readable without remote requests', { timeout: 60000 }, async () => {
+  const browser = await launchTestBrowser();
+  try {
+    const context = await browser.newContext();
+    const remote = [];
+    await context.route('**/*', route => {
+      if (new URL(route.request().url()).protocol === 'file:') return route.continue();
+      remote.push(route.request().url());
+      return route.abort();
+    });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(pathToFileURL(pagePath).href);
+    const panel = page.locator('#other-assistants');
+    assert.equal(await panel.evaluate(element => element.open), false);
+    await panel.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await panel.evaluate(element => element.open), true);
+    const text = await panel.innerText();
+    for (const expected of ['CLAUDE.md', 'AGENTS.md', '.claude/skills/', '.cursor/skills/', 'relative links', 'permissions', 'read-only']) {
+      assert.ok(text.includes(expected), `Missing adaptation instruction: ${expected}`);
+    }
+    await page.waitForFunction(() => new URL(location.href).searchParams.get('other-assistants') === 'open');
+    await page.reload();
+    assert.equal(await panel.evaluate(element => element.open), true);
+    assert.equal(await panel.getByRole('link', { name: 'Step-by-step adaptation and starter instructions' }).getAttribute('href'), 'README.md#adapt-to-claude-code-or-cursor');
+    for (const width of [1500, 768, 390, 320]) {
+      await page.setViewportSize({ width, height: 950 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `Adaptation overflow at ${width}px`);
+    }
+    await panel.locator('summary').click();
+    await page.waitForFunction(() => !new URL(location.href).searchParams.has('other-assistants'));
+    assert.deepEqual(remote, []);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+  }
+});
+
 test('guided scenarios, larger chat, template-shaped lab and prompt copy work offline and remain responsive', { timeout: 60000 }, async () => {
   const browser = await launchTestBrowser();
   try {
@@ -367,7 +408,10 @@ test('guided scenarios, larger chat, template-shaped lab and prompt copy work of
     await page.locator('#toolbox summary').click();
     assert.match(await page.locator('#toolbox').innerText(), /Microsoft Python skill/);
     const links = await page.locator('a[href]').evaluateAll(elements => elements.map(element => element.getAttribute('href')));
-    for (const link of links) if (!link.startsWith('#')) assert.ok(fs.existsSync(relative(link)), `Missing linked source: ${link}`);
+    for (const link of links) {
+      if (link.startsWith('#') || /^https?:/i.test(link)) continue;
+      assert.ok(fs.existsSync(relative(link.split('#')[0])), `Missing linked source: ${link}`);
+    }
     await page.locator('#starter summary').click();
     await page.waitForFunction(() => new URL(location.href).searchParams.get('starter') === 'open');
     await page.evaluate(() => {

@@ -106,7 +106,10 @@ h2{font-size:1.45rem;line-height:1.2;margin-bottom:12px}
 .boundary{display:flex;gap:10px;margin:14px 0 18px;padding:10px 12px;border:1px solid #d4e7dc;border-radius:10px;background:#f0f7f3;color:var(--muted);font-size:.73rem}
 .boundary .icon{color:var(--green)}
 .boundary b{color:var(--ink);white-space:nowrap}
-.extras{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+.extras .details-body h3{font-size:.85rem;margin:12px 0 6px}
+.extras .details-body p,.extras .details-body ol{font-size:.8rem;overflow-wrap:anywhere}
+.extras .details-body ol{padding-left:18px}.extras .details-body li{margin-bottom:8px}
 details{background:white;border:1px solid var(--line);border-radius:12px;min-width:0}
 summary{padding:15px 18px;cursor:pointer;font-size:.87rem;font-weight:600}
 summary:hover{color:var(--blue)}
@@ -250,6 +253,21 @@ noscript p{background:#fff4df;padding:20px}
           <div class="prompt-footer"><button class="btn" type="button" id="copy-prompt">Copy starter prompt</button><span id="copy-status" role="status" aria-live="polite"></span></div>
         </div>
       </details>
+      <details id="other-assistants">
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Claude Code &amp; Cursor</summary>
+        <div class="details-body">
+          <h3>Reuse the method, adapt the host</h3>
+          <p>The procedures are reusable; Copilot configuration is not automatically portable. These are adaptation steps, not tested cross-host installations.</p>
+          <h3>Claude Code</h3>
+          <ol><li>Merge safety and routing instructions into a root <code>CLAUDE.md</code>. Reference the canonical method and agent body under <code>.github/</code>; do not reuse Copilot frontmatter as Claude settings.</li><li>For native discovery, adapt complete skill folders into <code>.claude/skills/</code>. Preserve assets and repair relative links and script paths.</li><li>Configure trusted MCP servers and permissions in Claude. Adapt save-case/retro into native skills, or request their procedures in chat.</li></ol>
+          <h3>Cursor</h3>
+          <ol><li>Merge the same instructions into root <code>AGENTS.md</code> or a <code>.cursor/rules/*.mdc</code> rule. Include mandatory safety rules directly.</li><li>Adapt complete skill folders into <code>.cursor/skills/</code> or <code>.agents/skills/</code>. Check frontmatter, relative links and commands.</li><li>Configure Cursor MCP and approval settings; verify actual tool names instead of copying the Copilot allowlist.</li></ol>
+          <h3>Validate before connecting</h3>
+          <p>Ask for query triage with the exact request missing: no Azure calls, secret reads or writes. Confirm the workflow, missing evidence, hypotheses and stop for approval. Then check skill loading and tool discovery before approving a scoped read.</p>
+          <p>UAT/PROD and unknown environments stay read-only. Keep least privilege and evidence requirements. Instructions alone do not enforce permissions.</p>
+          <p><a href="README.md#adapt-to-claude-code-or-cursor">Step-by-step adaptation and starter instructions</a> · <a href="https://code.claude.com/docs/en/skills">Claude skills</a> · <a href="https://cursor.com/docs/skills">Cursor skills</a></p>
+        </div>
+      </details>
     </div>
     <noscript><p>Enable JavaScript to explore the walkthrough, or read the <a href=".github/README.md">methodology and setup guide</a>.</p></noscript>
   </main>
@@ -293,7 +311,7 @@ function syncUrl(){
   url.searchParams.set('chatTheme', chatTheme);
   if (previewOpen) url.searchParams.set('labPreview', 'open');
   else url.searchParams.delete('labPreview');
-  for (const name of ['toolbox', 'starter']) {
+  for (const name of ['toolbox', 'starter', 'other-assistants']) {
     if ($(name).open) url.searchParams.set(name, 'open');
     else url.searchParams.delete(name);
   }
@@ -434,7 +452,7 @@ $('agent-view').querySelectorAll('[data-capability]').forEach(button => button.o
 });
 $('choose-workflow').onclick = () => { showView('case'); $('workflows').querySelector('[aria-pressed="true"]').focus(); };
 $('get-prompt').onclick = () => { $('starter').open = true; $('starter-prompt').focus(); };
-for (const name of ['toolbox', 'starter']) {
+for (const name of ['toolbox', 'starter', 'other-assistants']) {
   $(name).open = params.get(name) === 'open';
   $(name).addEventListener('toggle', syncUrl);
 }

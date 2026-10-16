@@ -58,6 +58,7 @@ browser. The GitHub source viewer displays the file but does not run it.
 - [Local checks and maintenance](#local-checks-and-maintenance)
 - [Troubleshooting](#troubleshooting)
 - [Reuse in another workspace](#reuse-in-another-workspace)
+- [Adapt to Claude Code or Cursor](#adapt-to-claude-code-or-cursor)
 
 ## What this project does
 
@@ -519,6 +520,113 @@ private cases or installed dependencies.
 Confirm tool names, authorized targets, schema fields and API versions for each
 project. Reuse the method, not another project's assumptions or measurements.
 All project documentation, case artifacts and UI text are maintained in English.
+
+## Adapt to Claude Code or Cursor
+
+**Reuse the method, adapt the integration.** This repository ships a Copilot
+agent, not a tested installation for every assistant. Claude Code and Cursor
+can follow the same investigation procedures, but they have their own instruction
+files, skill discovery, tool identifiers and permission settings.
+
+### What stays the same, and what changes?
+
+| Component | Reuse | Adapt |
+| --- | --- | --- |
+| Investigation method | Hypotheses, approval, exact reproduction, regression checks and evidence | The assistant's entry-point instructions |
+| Skills | Procedure text, scripts, references and templates | Discovery directory, supported frontmatter and relative links |
+| Agent role | Routing and investigation responsibilities | Copilot-specific `tools`, `agents` and `argument-hint` metadata |
+| Save-case and retro prompts | Their procedures and approval gates | Native commands/skills, or an explicit chat request |
+| MCP and permissions | Required capabilities and least-privilege principle | Server setup, actual tool names and permission rules in each host |
+
+Keep [.github/](.github) as the canonical source. Do not overwrite an existing
+assistant configuration, copy secrets or assume a Copilot tool allowlist is
+enforced by another assistant.
+
+### Claude Code
+
+1. Merge a short project instruction into a root `CLAUDE.md`. Include the
+   non-negotiable safety rules directly and tell Claude which canonical files
+   to read. For example:
+
+   ```text
+   Investigate Azure AI Search; do not deploy or repair production.
+   UAT, PROD and unknown environments are read-only.
+   Wait for an approved, bounded plan before remote calls.
+   Never read or expose secret configuration files.
+   Before investigating, read .github/copilot-instructions.md,
+   .github/azure-ai-search-method.md and the body of
+   .github/agents/azure-ai-search-engineer.agent.md.
+   Treat the agent's frontmatter as Copilot metadata, not Claude configuration.
+   Select and read only the relevant .github/skills/<name>/SKILL.md.
+   Preserve evidence and report inconclusive results honestly.
+   ```
+
+2. For native skill discovery, adapt selected complete skill folders into
+   `.claude/skills/<name>/`, keeping `SKILL.md`, scripts, references and assets.
+   Review frontmatter for Claude support. **Repair relative links to the shared
+   method, catalog and sibling skills**; copying a folder alone does not repair
+   links that previously resolved under `.github`. Keep documented root-level
+   script commands valid, or explicitly update them in the adapted copy.
+3. Configure trusted MCP servers and permission rules in Claude Code. Discover
+   the actual tools; do not paste the Copilot `tools` list into Claude settings.
+   A missing MCP operation still requires exact approved REST/SDK measurements
+   or user-provided sanitized evidence, not fabricated results.
+4. Use an explicit request to save a case or propose a retro. If you want slash
+   commands, adapt those prompt bodies into native skills; do not assume
+   `.github/prompts/*.prompt.md` is discovered by Claude.
+
+Start with the instruction-only approach before maintaining duplicate skills.
+See official [Claude project instructions](https://code.claude.com/docs/en/memory),
+[skills](https://code.claude.com/docs/en/skills) and
+[MCP configuration](https://code.claude.com/docs/en/mcp).
+
+### Cursor
+
+1. Merge the same safety and routing instructions into a root `AGENTS.md`, or
+   create a project rule such as `.cursor/rules/azure-search.mdc`. Use Cursor's
+   rule format, not the Copilot agent frontmatter. A project-wide rule can start:
+
+   ```text
+   ---
+   description: Evidence-first Azure AI Search investigations
+   alwaysApply: true
+   ---
+   ```
+
+   Follow that header with the instruction text above. Keep mandatory safety
+   rules in the rule body: a file reference tells the assistant where to look,
+   but does not itself inline that file's contents.
+2. For native discovery, adapt full skill folders into
+   `.cursor/skills/<name>/` (or the supported shared `.agents/skills/<name>/`
+   location). Apply the same frontmatter, relative-link and script-path checks
+   described for Claude Code. Keep licenses and upstream provenance intact.
+3. Configure trusted MCP servers and approval settings in Cursor, verify tool
+   discovery, and explicitly request the relevant workflow in Agent chat.
+   Implement save-case/retro as supported native commands or skills only when
+   needed; otherwise request their procedures in chat.
+
+See official [Cursor rules](https://cursor.com/docs/rules),
+[skills](https://cursor.com/docs/skills) and
+[MCP configuration](https://cursor.com/docs/context/mcp).
+
+### Validate either adaptation before Azure access
+
+Use this prompt in a new session:
+
+```text
+Use the Azure AI Search investigation method for an unexpected query result.
+The exact request is missing. Identify the selected workflow, missing evidence,
+competing hypotheses and a bounded plan. Do not call Azure, inspect secret
+files or write anything. Stop for approval.
+```
+
+Confirm the assistant identifies `analyze-query`, asks for the request and target,
+states the read-only boundary and stops at the plan. Then validate skill loading,
+local links and scripts, followed by MCP discovery without resource calls.
+Only after that should you approve a narrowly scoped read with a least-privilege
+identity. Host permissions and Azure authorization must enforce access;
+instruction files alone are not a security boundary. Record the assistant
+version and any integration limitations; this guide is not cross-host certification.
 
 ## References and license
 
