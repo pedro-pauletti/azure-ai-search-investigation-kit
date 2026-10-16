@@ -1,24 +1,50 @@
 # Azure AI Search Investigation Toolkit
 
-A reusable GitHub Copilot workflow for investigating Azure AI Search: one
-specialized agent, focused skills, reproducible evidence and optional read-only
-labs. It does not assume a customer, document schema, industry or environment.
+**Investigate. Prove. Reuse.**
 
-Use it to move from **"this search looks wrong"** to an explanation supported by
-captured requests, controlled tests, official documentation and explicit limits.
-When evidence is missing, an inconclusive answer is better than an invented fix.
+Use GitHub Copilot in VS Code to investigate Azure AI Search with one specialized
+agent, focused skills and reproducible evidence. Start with a symptom, agree on
+a plan, test the hypotheses and save an explanation that others can reproduce.
 
-> **Prefer an interactive explanation?**
-> Open [the live presentation on GitHub Pages](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/)
-> or [the local presentation guide](search-lab-explained.html) in your browser.
-> Explore the agent's capabilities, select a scenario, walk through a simulated
-> Copilot conversation and copy a starter prompt. The guide runs offline and
-> needs no Azure account, credentials, Node.js or MCP configuration.
-> On GitHub, download or clone the repository and open the local HTML file;
-> the GitHub file viewer does not run the interactive page.
+## Start here: interactive guide
+
+### [Open the interactive guide →](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/)
+
+**No installation, sign-in or Azure credentials required.** Open the link
+directly in your browser; you do not need to download this repository.
+
+| In the guide | What to try |
+| --- | --- |
+| [Agent & access](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/?view=agent) | Click a capability to understand the agent, tools, skills and access boundaries |
+| [Follow a case](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/?view=case&workflow=analyze-query) | Choose a problem and explore context, approval, measurement, an optional lab and saving |
+| Copilot conversation | Expand tool activity, inspect synthetic mock outputs and switch the chat theme |
+| Starter prompt | Copy a prompt to use with the real agent in VS Code |
+
+> **Demo versus real investigation:** the guide simulates the workflow. Its
+> buttons do not invoke Copilot or contact Azure, and its mock outputs are not
+> measured results. The actual agent runs in VS Code with your configured tools
+> and explicitly approved access.
+
+Prefer offline access? Clone or download the repository, keep
+[presentation-assets/](presentation-assets) beside
+[search-lab-explained.html](search-lab-explained.html), and open the HTML in a
+browser. The GitHub source viewer displays the file but does not run it.
+
+## Pick your starting point
+
+| Your goal | Start with |
+| --- | --- |
+| Understand the approach before installing anything | [Interactive guide](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/) |
+| Try the agent without accessing Azure | [Quick start](#quick-start) |
+| Investigate an actual problem | [Choose a skill](#choose-a-skill), then [run an investigation](#run-an-investigation) |
+| Copy a ready-to-adapt request | [Example prompts](#example-prompts) |
+| Set up tools and permissions | [Configure tools for real evidence](#configure-tools-for-real-evidence) |
+| Build a lab or calculate relevance metrics | [Optional labs and relevance scoring](#optional-labs-and-relevance-scoring) |
 
 ## Contents
 
+- [Start here: interactive guide](#start-here-interactive-guide)
+- [Pick your starting point](#pick-your-starting-point)
 - [What this project does](#what-this-project-does)
 - [How the pieces work together](#how-the-pieces-work-together)
 - [Quick start](#quick-start)
@@ -42,7 +68,11 @@ When evidence is missing, an inconclusive answer is better than an invented fix.
 | Does a proposed configuration improve a judged query set? | Relevance benchmarking |
 | What does the telemetry show about latency, throttling or capacity? | Capacity review |
 
-This is **not** a hosted application, a deployment tool or an autonomous
+This toolkit is for engineers investigating search behavior, indexing failures
+or performance questions. It does not assume a customer, document schema,
+industry or environment.
+
+It is **not** a hosted investigation service, a deployment tool or an autonomous
 production repair system. Selecting an agent does not install an SDK, configure
 MCP servers, authenticate to Azure or grant permissions.
 
@@ -50,6 +80,10 @@ The presentation illustrates the workflow; it does not execute it. Real
 investigations happen in VS Code through approved tool calls and local scripts.
 
 ## How the pieces work together
+
+Think of the **agent as the investigator**, a **skill as its playbook** and
+**tools as the means of gathering evidence**. You provide context, approve the
+scope and review the findings.
 
 ```text
 Your question and captured evidence
@@ -78,24 +112,48 @@ Your question and captured evidence
 Only load the skills the case needs. An indexer diagnosis does not automatically
 require a relevance benchmark or a browser lab.
 
+### What you should get at the end
+
+A saved case should answer:
+
+- **What happened?** A supported verdict, or an explicit inconclusive result.
+- **Why?** The demonstrated mechanism and the alternatives tested.
+- **What supports it?** Sanitized requests, scripts, outputs and documentation.
+- **What should change?** A recommendation with validation status and risks.
+- **What is still unknown?** Limitations, regression checks and next steps.
+
+For example, "a fuzzy query returns an unexpected document" is a starting
+question, not a diagnosis. The agent should request the exact query, reproduce
+it after approval, isolate the relevant field or operator and explain the
+evidence before recommending a change. This is an illustrative sequence, not
+a claim about your service.
+
 ## Quick start
 
-### Explore without Azure access
+### Explore in your browser
 
-1. Download or clone this repository.
-2. Open [search-lab-explained.html](search-lab-explained.html) in Edge, Chrome or
-   another modern browser. On Windows, from the repository root:
-
-   ```powershell
-   Start-Process .\search-lab-explained.html
-   ```
-
-3. Explore **Agent capabilities**, then **Case walkthrough**.
-4. Copy a starter prompt when you are ready to try the workflow in VS Code.
+1. [Open the interactive guide](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/).
+2. Explore **Agent & access**, then **Follow a case**.
+3. Choose a workflow, simulate plan approval and expand the illustrative output.
+4. Open **Try it in Copilot** and copy the starter prompt.
 
 ### Use the agent in VS Code
 
-1. Open the repository folder in VS Code with GitHub Copilot available.
+**Prerequisites:** Git, VS Code and access to GitHub Copilot with support for
+custom agents and skills. An Azure identity is only needed when you move from
+planning to approved resource access.
+
+Clone the project and open it in VS Code:
+
+```powershell
+git clone https://github.com/pedro-pauletti/azure-ai-search-investigation-kit.git
+Set-Location .\azure-ai-search-investigation-kit
+code .
+```
+
+Then:
+
+1. Open Copilot Chat in this workspace.
 2. In Copilot Chat, select **azure-ai-search-engineer** in the agent picker.
 3. Confirm the agent and skills appear in **Agent Customizations**.
 4. Start with a no-call triage prompt:
@@ -107,13 +165,27 @@ require a relevance benchmark or a browser lab.
    Do not read secret files, call Azure or write files. Stop at a proposed plan.
    ```
 
-5. For a real investigation, configure trusted MCP servers and an authorized
+5. Check the response: it should select query analysis, identify missing context,
+   propose competing hypotheses and stop without executing anything.
+6. For a real investigation, configure trusted MCP servers and an authorized
    Azure identity. Check the actual tool names in **Configure Tools** before
-   approving any remote calls.
+   approving any remote calls. Then use an [example prompt](#example-prompts)
+   with the target, API version and sanitized evidence for your case.
 
-You do not need Node.js or Python for a planning-only conversation. Node.js is
-needed for the repository's checks and local relevance scorer. Python and the
-Azure SDK are needed only when the approved case uses Python scripts.
+### Install only what the task needs
+
+| Activity | Requirements |
+| --- | --- |
+| Read the online guide | A modern browser |
+| Ask the agent to triage and propose a plan | VS Code and GitHub Copilot |
+| Read authorized Azure resources | Configured tools or REST/SDK scripts, an authorized identity and an approved plan |
+| Run local checks | Node.js 22+, the lab tooling dependencies and a supported browser |
+| Calculate relevance metrics locally | Node.js 22+ and explicit judged rankings; no Azure connection |
+| Implement Python measurements | Python and the packages required by the approved scripts |
+
+Do not run `npm ci` or install the Azure SDK just to read the guide or try a
+planning-only conversation. See [local checks](#local-checks-and-maintenance)
+when you need the development tooling.
 
 ### Configure tools for real evidence
 
@@ -259,11 +331,13 @@ Distinguish measured bottlenecks from correlation and untested recommendations.
 
 ## Use the interactive presentation
 
-The [HTML guide](search-lab-explained.html) provides two complementary views:
+**[Launch the interactive guide](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/)**
+or open [the local HTML](search-lab-explained.html).
+The guide provides two complementary views:
 
-- **Agent capabilities:** click Azure resources, Microsoft Learn, skills or
+- **Agent & access:** click Azure resources, Microsoft Learn, skills or
   workspace to see their roles, declared tools and access boundaries.
-- **Case walkthrough:** choose an indexer, query, relevance or capacity
+- **Follow a case:** choose an indexer, query, relevance or capacity
   scenario and follow context, approval, measurement, optional lab and saving.
 
 The larger simulated chat includes expandable tool activity, a light/dark theme,
@@ -426,7 +500,7 @@ each workflow; these are examples, not agent executions or measured findings.
 | A query cannot be reproduced exactly through MCP | Use an approved REST/SDK script that preserves the request and API version |
 | Relevance scoring rejects input | Check metadata, unique IDs, valid grades and judgments for every retrieved document within K |
 | Browser checks cannot launch | Install Edge, Chrome or Chromium and ensure `npm ci --prefix lab-kit` completed |
-| The HTML is static on GitHub | Open the downloaded local file in a browser rather than the GitHub source viewer |
+| The HTML is static on GitHub | [Open the live guide](https://pedro-pauletti.github.io/azure-ai-search-investigation-kit/) instead of the source viewer, or open the downloaded HTML locally |
 | Tool descriptions in the HTML are outdated | Run `npm run update-guide`, then rerun the checks |
 
 ## Reuse in another workspace
